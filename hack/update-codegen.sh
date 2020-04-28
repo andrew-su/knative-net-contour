@@ -18,6 +18,8 @@ set -o errexit
 set -o nounset
 set -o pipefail
 
+export GO111MODULE=on
+
 REPO_ROOT=$(dirname ${BASH_SOURCE})/..
 CODEGEN_PKG=${CODEGEN_PKG:-$(cd ${REPO_ROOT}; ls -d -1 $(dirname ${BASH_SOURCE})/../vendor/k8s.io/code-generator 2>/dev/null || echo ../code-generator)}
 

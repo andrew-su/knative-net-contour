@@ -21,6 +21,10 @@ set -o errexit
 set -o nounset
 set -o pipefail
 
+export GO111MODULE=on
+export GOFLAGS=-mod=vendor
+
+
 cd ${ROOT_DIR}
 
 # The list of dependencies that we track at HEAD and periodically
@@ -32,25 +36,28 @@ FLOATING_DEPS=(
   "github.com/projectcontour/contour"
 )
 
-# Parse flags to determine any we should pass to dep.
-DEP_FLAGS=()
+# Parse flags to determine any we should fetch updated floating deps.
+GO_GET=0
 while [[ $# -ne 0 ]]; do
   parameter=$1
   case ${parameter} in
-    --upgrade) DEP_FLAGS=( -update ${FLOATING_DEPS[@]} ) ;;
+    --upgrade) GO_GET=1 ;;
     *) abort "unknown option ${parameter}" ;;
   esac
   shift
 done
-readonly DEP_FLAGS
+readonly GO_GET
 
-# Ensure we have everything we need under vendor/
-dep ensure ${DEP_FLAGS[@]}
+if (( GO_GET )); then
+  go get -d ${FLOATING_DEPS[@]}
+fi
+
+# Prune modules
+go mod tidy
+go mod vendor
 
 rm -rf $(find vendor/ -name 'OWNERS')
-# Remove unit tests & e2e tests.
-rm -rf $(find vendor/ -path '*/pkg/*_test.go')
-rm -rf $(find vendor/ -path '*/e2e/*_test.go')
+rm -rf $(find vendor/ -name '*_test.go')
 
 function delete_contour_cluster_role_bindings() {
   sed -e '/apiVersion: rbac.authorization.k8s.io/{' -e ':a' -e '${' -e 'p' -e 'd'  -e '}' -e 'N' -e '/---/!ba' -e '/kind: ClusterRoleBinding/d' -e '}'
